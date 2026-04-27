@@ -1,0 +1,226 @@
+<div class="page-wrapper">
+  <div class="project-tabs">
+    <a routerLink="/projects" class="back-link">← Projects</a>
+    <span class="page-title">Customer Intakes</span>
+    <div class="tabs">
+      <a [routerLink]="['/projects', projectId, 'session']" class="tab">Sessions</a>
+      <a [routerLink]="['/projects', projectId, 'docs']" class="tab">Docs</a>
+      <span class="tab active">Intakes</span>
+    </div>
+    <button class="btn btn-primary btn-sm" (click)="showSimulateForm = !showSimulateForm">
+      + Simulate Intake
+    </button>
+  </div>
+
+  <!-- Simulate form -->
+  @if (showSimulateForm) {
+    <div class="simulate-form card">
+      <h3>Simulate Customer Intake</h3>
+      <p class="hint">Create a test intake to trigger the analyzer agent. In production, this comes from Zammad webhooks.</p>
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label>Title <span class="required">*</span></label>
+          <input type="text" [(ngModel)]="simTitle" placeholder="e.g. Login fails with 500 error" />
+        </div>
+        <div class="form-group" style="width:140px">
+          <label>Severity</label>
+          <select [(ngModel)]="simSeverity">
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea [(ngModel)]="simDescription" rows="3" placeholder="User reported: when I try to login, I get a server error. The error GUID shown was abc123-def456..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label>Error GUID (optional)</label>
+          <input type="text" [(ngModel)]="simGuid" placeholder="e.g. a1b2c3d4-e5f6-7890-abcd-ef1234567890" />
+        </div>
+        <div class="form-group" style="width:180px">
+          <label>Reporter</label>
+          <input type="text" [(ngModel)]="simReporter" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-outline btn-sm" (click)="showSimulateForm = false">Cancel</button>
+        <button class="btn btn-primary btn-sm" [disabled]="!simTitle.trim() || simulating" (click)="simulateIntake()">
+          @if (simulating) { Submitting… } @else { Submit Intake }
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-state"><div class="spinner"></div><p>Loading intakes…</p></div>
+  } @else if (intakes.length === 0 && !showSimulateForm) {
+    <div class="empty-state">
+      <div class="icon">📋</div>
+      <p>No customer intakes yet for this project.</p>
+      <button class="btn btn-primary" style="margin-top:12px" (click)="showSimulateForm = true">+ Simulate Intake</button>
+    </div>
+  } @else {
+    <div class="intakes-layout">
+      <!-- Left: intake list -->
+      <div class="intakes-sidebar">
+        <div class="sidebar-label">INTAKES</div>
+        @for (intake of intakes; track intake.id) {
+          <button class="intake-item" [class.active]="selectedIntake?.id === intake.id" (click)="selectIntake(intake)">
+            <span class="intake-sev-dot {{ severityClass(intake.severity) }}"></span>
+            <div class="intake-item-info">
+              <span class="intake-title">{{ intake.title }}</span>
+              <span class="intake-meta">
+                {{ intake.ticket_id }} · {{ statusLabel(intake.status) }}
+                @if (intake.status === 'ANALYZING') { <span class="analyzing-dot"></span> }
+              </span>
+            </div>
+          </button>
+        }
+      </div>
+
+      <!-- Right: detail panel -->
+      <div class="intake-detail">
+        @if (!selectedIntake) {
+          <div class="empty-detail">
+            <p>Select an intake from the list to view analysis details.</p>
+          </div>
+        } @else {
+          <div class="detail-header">
+            <div class="detail-title-row">
+              <span class="sev-badge {{ severityClass(selectedIntake.severity) }}">{{ selectedIntake.severity }}</span>
+              <h2>{{ selectedIntake.title }}</h2>
+            </div>
+            <div class="detail-meta">
+              <span>Ticket: {{ selectedIntake.ticket_id }}</span>
+              <span>Reporter: {{ selectedIntake.reporter }}</span>
+              <span>Status: <strong>{{ statusLabel(selectedIntake.status) }}</strong></span>
+              @if (selectedIntake.guid) { <span>GUID: <code>{{ selectedIntake.guid }}</code></span> }
+              <span>{{ selectedIntake.created_at | date:'MMM d, yyyy HH:mm' }}</span>
+            </div>
+          </div>
+
+          <div class="detail-description">
+            <h3>Customer Description</h3>
+            <p>{{ selectedIntake.description }}</p>
+          </div>
+
+          <!-- Live agent progress -->
+          @if (selectedIntake.status === 'ANALYZING' || selectedIntake.status === 'PENDING') {
+            <div class="agent-progress">
+              <div class="progress-header">
+                <span class="pulse-dot"></span>
+                <strong>Intake Analyzer Agent</strong>
+                <span class="progress-status">Running…</span>
+              </div>
+              <div class="event-feed">
+                @for (ev of events; track $index) {
+                  <div class="event-line">
+                    <span class="ev-tag ev-{{ ev.type }}">{{ ev.agent?.toUpperCase() ?? 'AGENT' }}</span>
+                    <span class="ev-msg">{{ ev.message }}</span>
+                  </div>
+                }
+                @if (events.length === 0) {
+                  <div class="event-line"><span class="ev-msg muted">Waiting for agent to start…</span></div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Analysis results -->
+          @if (selectedIntake.status === 'ANALYZED' && selectedIntake.analysis) {
+            <div class="analysis-results">
+              <h3>Analysis Report</h3>
+
+              <div class="analysis-section">
+                <span class="analysis-label">Summary</span>
+                <p>{{ selectedIntake.analysis.summary }}</p>
+              </div>
+
+              <div class="analysis-section">
+                <span class="analysis-label">Root Cause</span>
+                <p>{{ selectedIntake.analysis.root_cause }}</p>
+              </div>
+
+              <div class="analysis-row">
+                <div class="analysis-section">
+                  <span class="analysis-label">Severity Assessment</span>
+                  <span class="sev-badge {{ severityClass(selectedIntake.analysis.severity_assessment) }}">
+                    {{ selectedIntake.analysis.severity_assessment }}
+                  </span>
+                </div>
+                <div class="analysis-section">
+                  <span class="analysis-label">Code Fix Needed</span>
+                  <span class="fix-badge" [class.fix-yes]="selectedIntake.analysis.code_fix_needed" [class.fix-no]="!selectedIntake.analysis.code_fix_needed">
+                    {{ selectedIntake.analysis.code_fix_needed ? 'Yes' : 'No' }}
+                  </span>
+                </div>
+                <div class="analysis-section">
+                  <span class="analysis-label">Splunk Events</span>
+                  <span>{{ selectedIntake.analysis.splunk_events ?? 0 }} events ({{ selectedIntake.analysis.splunk_errors ?? 0 }} errors)</span>
+                </div>
+              </div>
+
+              @if (selectedIntake.analysis.affected_components?.length) {
+                <div class="analysis-section">
+                  <span class="analysis-label">Affected Components</span>
+                  <div class="chip-list">
+                    @for (c of selectedIntake.analysis.affected_components; track c) {
+                      <span class="chip">{{ c }}</span>
+                    }
+                  </div>
+                </div>
+              }
+
+              @if (selectedIntake.analysis.suggested_fix) {
+                <div class="analysis-section">
+                  <span class="analysis-label">Suggested Fix</span>
+                  <p class="fix-text">{{ selectedIntake.analysis.suggested_fix }}</p>
+                </div>
+              }
+
+              @if (selectedIntake.analysis.affected_files?.length) {
+                <div class="analysis-section">
+                  <span class="analysis-label">Affected Files</span>
+                  <div class="file-list">
+                    @for (f of selectedIntake.analysis.affected_files; track f) {
+                      <code class="file-path">{{ f }}</code>
+                    }
+                  </div>
+                </div>
+              }
+
+              @if (selectedIntake.analysis.recommended_actions?.length) {
+                <div class="analysis-section">
+                  <span class="analysis-label">Recommended Actions</span>
+                  <ul class="action-list">
+                    @for (a of selectedIntake.analysis.recommended_actions; track a) {
+                      <li>{{ a }}</li>
+                    }
+                  </ul>
+                </div>
+              }
+
+              @if (selectedIntake.analysis.splunk_evidence) {
+                <div class="analysis-section">
+                  <span class="analysis-label">Splunk Evidence</span>
+                  <pre class="evidence-block">{{ selectedIntake.analysis.splunk_evidence }}</pre>
+                </div>
+              }
+            </div>
+          }
+
+          @if (selectedIntake.status === 'FAILED') {
+            <div class="analysis-failed">
+              <span class="fail-icon">✗</span>
+              <p>Analysis failed. {{ selectedIntake.analysis?.error ?? 'Unknown error.' }}</p>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+</div>

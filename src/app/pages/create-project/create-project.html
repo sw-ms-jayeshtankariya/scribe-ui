@@ -1,0 +1,145 @@
+<div class="page-wrapper">
+  <div class="form-page">
+    <div class="form-header">
+      <a routerLink="/projects" class="back-link">← Back to Projects</a>
+      <h1>Create New Project</h1>
+      <p class="sub">Connect your repositories and Confluence spaces. A smart agent will automatically scan everything and extract the tech stack and project summary once you onboard.</p>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="project-form">
+
+      <!-- Basic Info -->
+      <div class="form-section">
+        <h3 class="section-title">Basic Information</h3>
+        <div class="form-group">
+          <label>Project Name <span class="required">*</span></label>
+          <input type="text" [(ngModel)]="name" name="name" placeholder="e.g. ISE, MagentaMOP, My API" />
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea [(ngModel)]="description" name="description" placeholder="Brief description of the project and its purpose." rows="3"></textarea>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Repositories -->
+      <div class="form-section">
+        <h3 class="section-title">GitHub Repositories <span class="required">*</span></h3>
+        <p class="section-hint">Paste a GitHub repo URL — access is validated automatically and branches are loaded.</p>
+
+        @for (repo of repos; track $index) {
+          <div class="repo-row">
+            <div class="input-with-status">
+              <input
+                type="url"
+                [value]="repo.url"
+                [name]="'repoUrl' + $index"
+                placeholder="https://github.com/org/repo"
+                (input)="onRepoUrlChange(repo, $any($event.target).value)"
+                [class.input-valid]="repo.state === 'valid'"
+                [class.input-invalid]="repo.state === 'invalid'"
+              />
+              <span class="status-icon" [class.animate-in]="repo.state === 'valid' || repo.state === 'invalid'">
+                @switch (repo.state) {
+                  @case ('checking') { <span class="spin-icon">⟳</span> }
+                  @case ('valid')    { <span class="ok-icon animated-check">✓</span> }
+                  @case ('invalid')  { <span class="err-icon animated-check">✗</span> }
+                }
+              </span>
+            </div>
+
+            <div class="branch-select-wrap" [class.branch-ready]="repo.state === 'valid'">
+              <select
+                [(ngModel)]="repo.branch"
+                [name]="'branch' + $index"
+                [disabled]="repo.state !== 'valid'"
+              >
+                @if (repo.state !== 'valid') {
+                  <option value="" disabled selected>Branch</option>
+                }
+                @for (b of repo.branches; track b) {
+                  <option [value]="b">{{ b }}</option>
+                }
+              </select>
+            </div>
+
+            @if (repos.length > 1) {
+              <button type="button" class="remove-btn" (click)="removeRepo($index)" title="Remove">×</button>
+            }
+          </div>
+
+          @if (repo.state === 'valid') {
+            <div class="repo-confirmed animate-slide-in">
+              ✓ Access confirmed — <strong>{{ repo.repoName }}</strong> · {{ repo.branches.length }} {{ repo.branches.length === 1 ? 'branch' : 'branches' }} found
+            </div>
+          }
+          @if (repo.state === 'invalid') {
+            <div class="repo-error animate-slide-in">✗ {{ repo.error }}</div>
+          }
+        }
+
+        <button type="button" class="add-link" (click)="addRepo()">+ Add Another Repository</button>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Confluence Sources -->
+      <div class="form-section">
+        <h3 class="section-title">Confluence Transcript Sources <span class="optional">(optional)</span></h3>
+        <p class="section-hint">Add Confluence space URLs. The agent will read pages from these spaces as background context for documentation generation.</p>
+
+        @for (src of confluenceSources; track $index) {
+          <div class="repo-row">
+            <div class="input-with-status">
+              <input
+                type="url"
+                [value]="src.url"
+                [name]="'confluence' + $index"
+                placeholder="https://your-org.atlassian.net/wiki/spaces/SPACEKEY"
+                (input)="onConfluenceUrlChange(src, $any($event.target).value)"
+                [class.input-valid]="src.state === 'valid'"
+                [class.input-invalid]="src.state === 'invalid'"
+              />
+              <span class="status-icon" [class.animate-in]="src.state === 'valid' || src.state === 'invalid'">
+                @switch (src.state) {
+                  @case ('checking') { <span class="spin-icon">⟳</span> }
+                  @case ('valid')    { <span class="ok-icon animated-check">✓</span> }
+                  @case ('invalid')  { <span class="err-icon animated-check">✗</span> }
+                }
+              </span>
+            </div>
+            <button type="button" class="remove-btn" (click)="removeConfluenceSource($index)">×</button>
+          </div>
+
+          @if (src.state === 'valid') {
+            <div class="repo-confirmed animate-slide-in">
+              ✓ Space confirmed — <strong>{{ src.spaceName }}</strong> ({{ src.spaceKey }})
+            </div>
+          }
+          @if (src.state === 'invalid') {
+            <div class="repo-error animate-slide-in">✗ {{ src.error }}</div>
+          }
+        }
+
+        <button type="button" class="add-link" (click)="addConfluenceSource()">+ Add Confluence Space</button>
+      </div>
+
+      @if (submitError) {
+        <div class="submit-error">⚠ {{ submitError }}</div>
+      }
+
+      <div class="form-footer">
+        <a routerLink="/projects" class="btn btn-outline">Cancel</a>
+        <button type="submit" class="btn btn-primary" [disabled]="!canSubmit">
+          @if (submitting) { <span class="spin-icon-sm">⟳</span> Onboarding… }
+          @else { Onboard Project }
+        </button>
+      </div>
+
+      @if (!canSubmit && repos.some(r => r.state !== 'valid') && name.trim()) {
+        <p class="submit-hint">All repository URLs must be validated (green ✓) before you can proceed.</p>
+      }
+    </form>
+  </div>
+</div>

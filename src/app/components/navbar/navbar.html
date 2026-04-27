@@ -1,0 +1,35 @@
+<nav class="navbar">
+  <div class="nav-left">
+    <a routerLink="/" class="nav-brand">Scribe</a>
+    <div class="nav-links">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Home</a>
+      <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
+      <a routerLink="/projects" routerLinkActive="active">Projects</a>
+    </div>
+  </div>
+
+  <div class="nav-right">
+    <button class="chat-btn" (click)="openDocAssistant.emit()">
+      💬 Chat with your docs
+    </button>
+    <div class="user-info">
+      <span class="user-name">{{ userName }}</span>
+      <span class="user-email">{{ userEmail }}</span>
+    </div>
+    <div class="role-selector" (clickOutside)="showRoleMenu = false">
+      <button class="role-btn" (click)="toggleRoleMenu()">
+        {{ currentRole }} <span class="caret">▾</span>
+      </button>
+      @if (showRoleMenu) {
+        <div class="role-menu">
+          @for (role of roles; track role) {
+            <button class="role-item" [class.selected]="role === currentRole" (click)="selectRole(role)">
+              {{ role }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+    <button class="logout-btn">Logout</button>
+  </div>
+</nav>

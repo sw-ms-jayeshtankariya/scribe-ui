@@ -1,0 +1,155 @@
+<div class="page-wrapper">
+  <div class="page-header">
+    <h1>Admin Dashboard</h1>
+    <div class="date-filter">
+      <label>From:</label>
+      <input type="date" [(ngModel)]="fromDate" />
+      <label>To:</label>
+      <input type="date" [(ngModel)]="toDate" />
+      <span class="total-queries">Total queries: {{ totalQueries }}</span>
+    </div>
+  </div>
+
+  <!-- Summary stat cards -->
+  <div class="stat-cards">
+    <div class="stat-card">
+      <span class="stat-label">TOTAL RUNS</span>
+      <span class="stat-value">{{ summaryStats.runs }}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">TOTAL COST</span>
+      <span class="stat-value">{{ summaryStats.cost }}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">TOTAL TOKENS</span>
+      <span class="stat-value">{{ summaryStats.tokens }}</span>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>Queries Over Time</h3>
+      <div class="mock-chart line-chart">
+        <div class="bar-group">
+          @for (h of [6,10,12,8,4,2,3,2,1,3,2,3,2,1]; track $index) {
+            <div class="bar-line" [style.height.px]="h * 9"></div>
+          }
+        </div>
+        <div class="chart-x-labels">
+          <span>Mar 10</span><span>Mar 17</span><span>Mar 25</span>
+          <span>Apr 08</span><span>Apr 13</span><span>Apr 21</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Queries by Role</h3>
+      <div class="donut-wrap">
+        <div class="donut">
+          <div class="donut-inner">50/50</div>
+        </div>
+        <div class="donut-legend">
+          <span class="legend-item"><span class="dot engineer"></span> ENGINEER</span>
+          <span class="legend-item"><span class="dot reviewer"></span> REVIEWER</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Model Usage</h3>
+      <div class="bar-chart-v">
+        <div class="v-bar-group">
+          <div class="v-bar-item"><div class="v-bar sonnet" style="height:148px"></div><span>Sonnet</span></div>
+          <div class="v-bar-item"><div class="v-bar haiku"  style="height:20px"></div><span>Haiku</span></div>
+          <div class="v-bar-item"><div class="v-bar none"   style="height:12px"></div><span>none</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Questions -->
+  <div class="section-row">
+    <div class="card half">
+      <h3>Top 10 Questions</h3>
+      <div class="top-questions">
+        @for (q of topQuestions; track $index) {
+          <div class="q-row">
+            <span class="q-text">{{ q.q }}</span>
+            <div class="q-bar-wrap">
+              <div class="q-bar" [style.width.%]="(q.count / 32) * 100"></div>
+            </div>
+            <span class="q-count">{{ q.count }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Cost by Project -->
+    <div class="card half">
+      <h3>Cost by Project</h3>
+      <table class="data-table">
+        <thead>
+          <tr><th>Project</th><th>Runs</th><th>Tokens</th><th>Cost</th></tr>
+        </thead>
+        <tbody>
+          @for (row of costByProject; track row.project) {
+            <tr>
+              <td>{{ row.project }}</td>
+              <td>{{ row.runs }}</td>
+              <td>{{ row.tokens }}</td>
+              <td class="cost-val">{{ row.cost }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Agent Performance -->
+  <div class="card full">
+    <h3>Agent Performance</h3>
+    <table class="data-table">
+      <thead>
+        <tr><th>Agent</th><th>Calls</th><th>Avg Tokens</th><th>Avg Duration</th><th>Files Scanned</th><th>Total Cost</th></tr>
+      </thead>
+      <tbody>
+        @for (a of agentPerformance; track a.name) {
+          <tr>
+            <td><code>{{ a.name }}</code></td>
+            <td>{{ a.calls }}</td>
+            <td>{{ a.avgTokens.toLocaleString() }}</td>
+            <td>{{ a.avgDuration }}</td>
+            <td>{{ a.filesScanned }}</td>
+            <td class="cost-val">{{ a.totalCost }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Recent Generation Runs -->
+  <div class="card full" style="margin-top:20px">
+    <h3>Recent Generation Runs</h3>
+    <table class="data-table">
+      <thead>
+        <tr><th>Run ID</th><th>Project</th><th>Depth</th><th>Status</th><th>Duration</th><th>Agent Calls</th><th>Files</th><th>Features</th><th>Cost</th></tr>
+      </thead>
+      <tbody>
+        @for (r of recentRuns; track r.id) {
+          <tr>
+            <td><code class="run-id">{{ r.id }}</code></td>
+            <td>{{ r.project }}</td>
+            <td><span class="depth-chip">{{ r.depth }}</span></td>
+            <td><span [class]="statusCls(r.status)">{{ r.status }}</span></td>
+            <td>{{ r.duration }}</td>
+            <td>{{ r.agentCalls }}</td>
+            <td>{{ r.files }}</td>
+            <td>{{ r.features }}</td>
+            <td class="cost-val">{{ r.cost }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

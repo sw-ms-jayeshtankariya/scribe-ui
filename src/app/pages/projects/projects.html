@@ -1,0 +1,148 @@
+<div class="page-wrapper">
+  <div class="page-header">
+    <h1>Project Configurator</h1>
+    <a routerLink="/projects/new" class="btn btn-primary">+ New Project</a>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading projects from database…</p>
+    </div>
+  } @else if (error) {
+    <div class="error-banner">
+      ⚠ {{ error }}
+      <button class="btn btn-outline btn-sm" (click)="loadProjects()">Retry</button>
+    </div>
+  } @else if (projects.length === 0) {
+    <div class="empty-state">
+      <div class="icon">📂</div>
+      <p>No projects yet. Create your first project to get started.</p>
+      <a routerLink="/projects/new" class="btn btn-primary" style="margin-top:16px">+ New Project</a>
+    </div>
+  } @else {
+    <div class="project-list">
+      @for (p of projects; track p.id) {
+        <div class="project-card"
+             [class.scanning]="p.status === 'SCANNING'"
+             [class.pending]="p.status === 'PENDING'">
+
+          <!-- Title row: name + tech badges + status -->
+          <div class="project-title-row">
+            <h2 class="project-name">{{ p.name }}</h2>
+            <div class="tech-badges">
+              @for (b of p.tech_badges | slice:0:4; track b.label) {
+                <span class="badge badge-{{ b.cls }}">{{ b.label }}</span>
+              }
+              @if (p.tech_badges.length > 4) {
+                <span class="badge badge-more">+{{ p.tech_badges.length - 4 }}</span>
+              }
+              <span class="badge badge-status-{{ p.status.toLowerCase() }}">
+                @if (p.status === 'SCANNING') {
+                  <span class="badge-spinner"></span>
+                }
+                {{ statusLabel(p.status) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Scanning / Pending progress indicator -->
+          @if (p.status === 'SCANNING' || p.status === 'PENDING') {
+            <div class="onboarding-progress">
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill"
+                     [class.indeterminate]="p.status === 'SCANNING'"
+                     [class.waiting]="p.status === 'PENDING'">
+                </div>
+              </div>
+              <div class="progress-steps">
+                <span class="step" [class.active]="true">
+                  @if (p.status === 'PENDING') { <span class="step-icon waiting-icon">◷</span> }
+                  @else { <span class="step-icon spin-icon">⟳</span> }
+                  {{ scanningHint(p) }}
+                </span>
+              </div>
+              <div class="progress-detail">
+                @if (p.status === 'SCANNING') {
+                  <span class="detail-item"><span class="pulse-dot"></span> Cloning repos & reading key files</span>
+                  <span class="detail-item">→ Detecting frameworks, languages & tools</span>
+                  <span class="detail-item">→ Extracting project summary & features</span>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Description -->
+          @if (p.description) {
+            <p class="project-desc">{{ p.description }}</p>
+          }
+
+          <!-- Agent feature bullets with left border accent -->
+          @if (p.features?.length) {
+            <ul class="feature-list">
+              @for (f of p.features | slice:0:3; track f) {
+                <li>{{ f }}</li>
+              }
+            </ul>
+          } @else if (p.agent_summary) {
+            <ul class="feature-list">
+              <li>{{ p.agent_summary }}</li>
+            </ul>
+          }
+
+          <!-- Stats row -->
+          <div class="project-stats">
+            <div class="stat">
+              <span class="stat-label">REPOS</span>
+              <span class="stat-value">{{ p.repos.length }}</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">DOCS</span>
+              <span class="stat-value">{{ p.docs_count }}</span>
+            </div>
+            @if (p.created_at) {
+              <div class="stat">
+                <span class="stat-label">CREATED</span>
+                <span class="stat-value">{{ p.created_at | slice:0:10 }}</span>
+              </div>
+            }
+          </div>
+
+          <!-- Repo chips with branch badge -->
+          @if (p.repos.length) {
+            <div class="repo-row">
+              @for (r of p.repos; track r.url) {
+                <span class="repo-chip">{{ r.url.replace('https://github.com/', '') }}</span>
+                <span class="branch-badge">{{ r.branch }}</span>
+              }
+            </div>
+          }
+
+          <!-- Action buttons — horizontal row at bottom -->
+          <div class="project-actions">
+            <button class="btn btn-success btn-sm" (click)="openGenerate(p)" [disabled]="p.status !== 'READY' && p.status !== 'AWAITING_CONFIRMATION'">
+              ▶ Generate Docs
+            </button>
+            <a [routerLink]="['/projects', p.id, 'session']" class="btn btn-outline btn-sm">Session History</a>
+            @if (p.docs_count > 0) {
+              <a [routerLink]="['/projects', p.id, 'docs']" class="btn btn-outline btn-sm">View Docs ({{ p.docs_count }})</a>
+            }
+            <a [routerLink]="['/projects', p.id, 'intakes']" class="btn btn-outline btn-sm">📋 Intakes</a>
+            <button class="btn btn-outline btn-sm rescan-btn">↺ Re-scan</button>
+            <div class="action-spacer"></div>
+            <button class="btn btn-outline btn-sm icon-btn delete-btn" (click)="deleteProject(p, $event)" title="Delete project">🗑</button>
+          </div>
+
+        </div>
+      }
+    </div>
+  }
+</div>
+
+@if (showGenerateModal && selectedProject) {
+  <app-generate-docs-modal
+    [projectName]="selectedProject.name"
+    (close)="showGenerateModal = false"
+    (generate)="onGenerate($event)"
+  />
+}

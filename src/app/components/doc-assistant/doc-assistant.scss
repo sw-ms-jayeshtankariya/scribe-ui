@@ -1,0 +1,252 @@
+// ── Docked side panel (fills parent .assistant-dock) ─────────────────────────
+
+:host {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.assistant-panel {
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// ── Header ───────────────────────────────────────────────────────────────────
+
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--color-nav); color: #fff; padding: 12px 16px;
+  flex-shrink: 0;
+  .panel-title { font-size: 14px; font-weight: 600; }
+}
+
+.panel-header-actions {
+  display: flex; align-items: center; gap: 8px;
+}
+
+.clear-btn {
+  background: none; border: 1px solid rgba(255,255,255,.2);
+  color: rgba(255,255,255,.7); font-size: 10px; font-weight: 600;
+  padding: 3px 8px; border-radius: 4px; cursor: pointer;
+  text-transform: uppercase; letter-spacing: .3px;
+  transition: border-color 0.2s, color 0.2s;
+  &:hover { border-color: rgba(255,255,255,.5); color: #fff; }
+}
+
+.close-btn {
+  background: none; border: none; color: rgba(255,255,255,.7);
+  font-size: 18px; line-height: 1; cursor: pointer; padding: 2px 4px;
+  &:hover { color: #fff; }
+}
+
+// ── Project select + role ────────────────────────────────────────────────────
+
+.project-select-row {
+  padding: 12px 16px 8px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex; flex-direction: column; gap: 5px;
+  flex-shrink: 0;
+
+  label {
+    font-size: 9px; font-weight: 700; letter-spacing: .6px;
+    color: var(--color-text-muted); margin-bottom: 3px; display: block;
+    text-transform: uppercase;
+  }
+  select { font-size: 13px; }
+}
+
+.select-row-top {
+  display: flex; align-items: flex-end; gap: 8px;
+}
+
+.select-group {
+  flex: 1; display: flex; flex-direction: column; min-width: 0;
+}
+
+.role-badge {
+  font-size: 10px; font-weight: 600; padding: 4px 8px;
+  border-radius: 5px; white-space: nowrap; flex-shrink: 0;
+  text-transform: uppercase; letter-spacing: .3px;
+
+  &.role-reviewer { background: #dbeafe; color: #1d4ed8; }
+  &.role-engineer { background: #fef3c7; color: #92400e; }
+  &.role-admin    { background: #dcfce7; color: #15803d; }
+}
+
+.role-hint {
+  font-size: 10px; color: var(--color-text-muted); line-height: 1.3;
+}
+
+// ── Chat area ────────────────────────────────────────────────────────────────
+
+.chat-area {
+  flex: 1; overflow-y: auto; padding: 12px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  min-height: 0;
+}
+
+.empty-chat {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 30px 16px; gap: 6px;
+  p { color: var(--color-text-muted); font-size: 13px; line-height: 1.6; }
+  strong { color: var(--color-text); }
+  .empty-hint { font-size: 11px; color: var(--color-text-muted); }
+}
+
+// ── Messages ─────────────────────────────────────────────────────────────────
+
+.message {
+  display: flex; flex-direction: column;
+  &.user { align-items: flex-end; }
+  &.assistant { align-items: flex-start; }
+}
+
+.bubble {
+  max-width: 92%; padding: 9px 13px; border-radius: 10px; font-size: 13px; line-height: 1.6;
+  white-space: pre-wrap; word-break: break-word;
+  .user & { background: var(--color-primary); color: #fff; border-radius: 10px 10px 2px 10px; }
+  .assistant & { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 10px 10px 10px 2px; }
+}
+
+.typing-bubble { padding: 10px 16px; }
+
+.typing-dots {
+  display: inline-flex; gap: 4px; align-items: center;
+  span {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--color-text-muted);
+    animation: typing-bounce 1.2s ease-in-out infinite;
+    &:nth-child(2) { animation-delay: 0.15s; }
+    &:nth-child(3) { animation-delay: 0.3s; }
+  }
+}
+
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+// ── Details / Meta ───────────────────────────────────────────────────────────
+
+.show-details-btn {
+  background: none; border: none; color: var(--color-primary);
+  font-size: 11px; cursor: pointer; margin-top: 3px; padding: 0;
+  &:hover { text-decoration: underline; }
+}
+
+.meta-panel {
+  margin-top: 5px; padding: 8px 10px;
+  background: #f8fafc; border: 1px solid var(--color-border);
+  border-radius: 8px; max-width: 92%;
+  display: flex; flex-direction: column; gap: 7px;
+  animation: fade-in 0.2s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.meta-row { display: flex; flex-direction: column; gap: 2px; }
+
+.meta-label {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--color-text-muted);
+}
+
+.meta-value {
+  font-size: 11px; color: var(--color-text); line-height: 1.4;
+  &.mono { font-family: monospace; font-size: 10px; color: #6b7280; word-break: break-all; }
+}
+
+.confidence-bar-wrap { display: flex; align-items: center; gap: 8px; }
+.confidence-bar { flex: 1; height: 5px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+.confidence-fill {
+  height: 100%; border-radius: 3px; transition: width 0.4s ease;
+  &.confidence-high   { background: #16a34a; }
+  &.confidence-medium { background: #ca8a04; }
+  &.confidence-low    { background: #dc2626; }
+}
+.confidence-score { font-size: 11px; font-weight: 600; color: var(--color-text); white-space: nowrap; }
+
+.meta-timing { display: flex; gap: 4px; flex-wrap: wrap; }
+.timing-chip {
+  font-size: 10px; font-weight: 500; padding: 2px 5px;
+  background: #e0e7ff; color: #3730a3; border-radius: 4px;
+  &.total { background: #dbeafe; color: #1d4ed8; font-weight: 700; }
+}
+
+.chunk-list { display: flex; flex-direction: column; gap: 2px; }
+.chunk-item {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 10px; padding: 2px 5px;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 4px;
+}
+.chunk-source { color: var(--color-text); font-weight: 500; }
+.chunk-words { color: var(--color-text-muted); font-family: monospace; font-size: 9px; }
+
+// ── Suggestions ──────────────────────────────────────────────────────────────
+
+.suggestions-row {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 4px 0; animation: fade-in 0.25s ease-out;
+}
+
+.suggestions-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .4px; color: var(--color-text-muted);
+}
+
+.suggestion-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.suggestion-chip {
+  background: #eff6ff; border: 1px solid #bfdbfe;
+  color: #1d4ed8; font-size: 11px; font-weight: 500;
+  padding: 4px 10px; border-radius: 14px;
+  cursor: pointer; transition: background 0.15s, border-color 0.15s;
+  text-align: left; line-height: 1.4;
+  &:hover { background: #dbeafe; border-color: #93c5fd; }
+}
+
+// ── Footer / Input ───────────────────────────────────────────────────────────
+
+.chat-footer {
+  border-top: 1px solid var(--color-border);
+  display: flex; flex-direction: column;
+  flex-shrink: 0;
+}
+
+.turn-counter {
+  font-size: 10px; color: var(--color-text-muted); padding: 5px 16px 0;
+  text-align: center; font-weight: 500;
+}
+
+.chat-input-row {
+  display: flex; gap: 8px; padding: 8px 16px 12px;
+  input { flex: 1; font-size: 13px; }
+}
+
+.send-btn {
+  background: var(--color-primary); color: #fff; border: none;
+  padding: 7px 14px; border-radius: var(--radius); font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: background var(--transition);
+  &:hover:not(:disabled) { background: var(--color-primary-hover); }
+  &:disabled { opacity: .5; cursor: not-allowed; }
+}
+
+// ── Guardrail ────────────────────────────────────────────────────────────────
+
+.guardrail-bubble {
+  background: #fef3c7 !important;
+  border: 1px solid #fcd34d !important;
+  color: #92400e !important;
+  display: flex; align-items: flex-start; gap: 8px;
+  border-radius: 10px 10px 10px 2px !important;
+}
+
+.guardrail-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }

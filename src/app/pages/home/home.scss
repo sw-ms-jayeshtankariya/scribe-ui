@@ -1,0 +1,13 @@
+.hero {
+  min-height: calc(100vh - 54px);
+  display: flex; align-items: center; justify-content: center;
+  background:
+    radial-gradient(ellipse at 40% 50%, rgba(37,99,235,.07) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 30%, rgba(22,163,74,.05) 0%, transparent 50%),
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,0,0,.03) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,0,0,.03) 40px);
+}
+.hero-content { text-align: center; max-width: 560px; padding: 40px 24px; }
+.hero-title { font-size: 52px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 16px; }
+.hero-subtitle { font-size: 17px; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 32px; }
+.hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }

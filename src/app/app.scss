@@ -1,0 +1,63 @@
+:host { display: flex; flex-direction: column; min-height: 100vh; }
+
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0; // allow children to scroll independently
+  overflow: hidden;
+}
+
+.main-content {
+  overflow-y: auto;
+  min-width: 0;
+  transition: flex 0.2s ease;
+}
+
+// ── Resize handle ────────────────────────────────────────────────────────────
+
+.resize-handle {
+  width: 8px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  position: relative;
+  z-index: 10;
+
+  &:hover, &:active {
+    background: var(--color-primary);
+  }
+}
+
+.resize-grip {
+  color: #fff;
+  font-size: 14px;
+  letter-spacing: 2px;
+  writing-mode: vertical-lr;
+  user-select: none;
+  opacity: 0.6;
+
+  .resize-handle:hover &,
+  .resize-handle:active & {
+    opacity: 1;
+  }
+}
+
+// ── Assistant dock ───────────────────────────────────────────────────────────
+
+.assistant-dock {
+  flex-shrink: 0;
+  min-width: 320px;
+  max-width: 700px;
+  height: calc(100vh - 54px); // subtract navbar height
+  display: flex;
+  animation: dock-in 0.2s ease-out;
+}
+
+@keyframes dock-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}

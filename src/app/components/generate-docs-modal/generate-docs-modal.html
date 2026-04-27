@@ -1,0 +1,50 @@
+<div class="overlay" (click)="close.emit()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h2>Generate Documentation</h2>
+        <p class="project-label">{{ projectName }}</p>
+      </div>
+      <button class="close-btn" (click)="close.emit()">×</button>
+    </div>
+
+    <p class="section-hint">Select the level of detail for documentation generation. Higher detail uses more AI tokens and takes longer.</p>
+
+    <div class="options-group">
+      @for (opt of depthOptions; track opt.id) {
+        <label class="option-card" [class.selected]="depth === opt.id">
+          <input type="radio" name="depth" [value]="opt.id" [(ngModel)]="depth" />
+          <div class="option-body">
+            <div class="option-header">
+              <span class="option-label">{{ opt.label }}</span>
+              <span class="option-meta">{{ opt.time }} &nbsp;·&nbsp; {{ opt.cost }}</span>
+            </div>
+            <p class="option-desc">{{ opt.desc }}</p>
+          </div>
+        </label>
+      }
+    </div>
+
+    <hr class="divider" />
+
+    <p class="group-title">DISCOVERY MODE</p>
+    <div class="options-group">
+      @for (opt of discoveryOptions; track opt.id) {
+        <label class="option-card" [class.selected]="discoveryMode === opt.id">
+          <input type="radio" name="discovery" [value]="opt.id" [(ngModel)]="discoveryMode" />
+          <div class="option-body">
+            <div class="option-header">
+              <span class="option-label">{{ opt.label }}</span>
+            </div>
+            <p class="option-desc">{{ opt.desc }}</p>
+          </div>
+        </label>
+      }
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" (click)="close.emit()">Cancel</button>
+      <button class="btn btn-success" (click)="onGenerate()">▶ {{ generateLabel }}</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,16 @@
+<app-navbar (openDocAssistant)="showDocAssistant = true" />
+<div class="app-body" [class.assistant-open]="showDocAssistant">
+  <div class="main-content" [style.flex]="showDocAssistant ? '1 1 0' : '1 1 100%'">
+    <router-outlet />
+  </div>
+  @if (showDocAssistant) {
+    <div class="resize-handle"
+         (mousedown)="onResizeStart($event)"
+         title="Drag to resize">
+      <span class="resize-grip">⋮</span>
+    </div>
+    <div class="assistant-dock" [style.width.px]="assistantWidth">
+      <app-doc-assistant (close)="showDocAssistant = false" />
+    </div>
+  }
+</div>

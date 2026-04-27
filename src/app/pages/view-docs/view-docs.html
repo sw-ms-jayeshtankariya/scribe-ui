@@ -1,0 +1,230 @@
+<div class="page-wrapper">
+
+  <!-- Tab bar -->
+  <div class="project-tabs">
+    <a routerLink="/projects" class="back-link">← Back to Projects</a>
+    <span class="page-title">Document Review</span>
+    <div class="tabs">
+      <a [routerLink]="['/projects', projectId, 'session']" class="tab">Session History</a>
+      <button class="tab active">View Docs @if (docs.length) { ({{ docs.length }}) }</button>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading documents…</p>
+    </div>
+  } @else if (docs.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">📄</div>
+      <p>No documents generated yet for this project.</p>
+      <a [routerLink]="['/projects', projectId, 'session']" class="btn btn-primary" style="margin-top:16px">
+        Go to Session History
+      </a>
+    </div>
+  } @else {
+
+    <div class="docs-layout">
+
+      <!-- ── Left: document list ── -->
+      <div class="docs-sidebar">
+        <div class="sidebar-label">Generated Docs</div>
+        @for (doc of docs; track doc.id; let i = $index) {
+          <button
+            class="doc-item"
+            [class.active]="i === selectedIdx"
+            (click)="selectDoc(i)"
+          >
+            <span class="doc-status-dot"
+              [class.dot-approved]="doc.approved && doc.ingestion_status === 'completed'"
+              [class.dot-ingesting]="doc.ingestion_status === 'pending' || doc.ingestion_status === 'ingesting'"
+              [class.dot-pending]="!doc.approved"
+              [class.dot-failed]="doc.ingestion_status === 'failed'"
+            ></span>
+            <div class="doc-item-info">
+              <span class="doc-item-name">{{ doc.feature }}</span>
+              <span class="doc-item-meta">
+                {{ doc.depth }}
+                @if (doc.ingestion_status === 'ingesting') {
+                  · <span class="ingestion-label ingesting">Ingesting…</span>
+                } @else if (doc.ingestion_status === 'completed') {
+                  · <span class="ingestion-label completed">Indexed ({{ doc.chunks_count }} chunks)</span>
+                } @else if (doc.ingestion_status === 'pending') {
+                  · <span class="ingestion-label pending">Queued</span>
+                } @else if (doc.ingestion_status === 'failed') {
+                  · <span class="ingestion-label failed">Ingestion failed</span>
+                } @else if (doc.approved) {
+                  · Approved
+                } @else {
+                  · Pending
+                }
+              </span>
+            </div>
+          </button>
+        }
+      </div>
+
+      <!-- ── Middle: document viewer ── -->
+      <div class="doc-main">
+
+        <!-- Toolbar -->
+        <div class="doc-toolbar">
+          <div class="doc-type-tabs">
+            <button class="dtype-tab" [class.active]="activeTab === 'business'" (click)="activeTab = 'business'">
+              Business Doc
+            </button>
+            <button class="dtype-tab" [class.active]="activeTab === 'technical'" (click)="activeTab = 'technical'">
+              Technical Use
+            </button>
+          </div>
+
+          <div class="doc-diff-toggle">
+            @if (hasPrevVersion) {
+              <button class="btn btn-ghost btn-sm" (click)="showDiff = !showDiff">
+                {{ showDiff ? 'Hide Diff' : 'Side-by-Side Diff' }}
+              </button>
+            }
+            <button class="btn btn-outline btn-sm" (click)="resetEdits()" [disabled]="!hasPrevVersion || resetting">
+              @if (resetting) { Resetting… } @else { Reset Edits }
+            </button>
+            <button
+              class="btn btn-success btn-sm"
+              (click)="approveDoc()"
+              [disabled]="selectedDoc?.approved || approving"
+            >
+              @if (approving) { Saving… }
+              @else if (selectedDoc?.approved) { ✓ Approved }
+              @else { ✓ Approve &amp; Save Business Doc }
+            </button>
+          </div>
+        </div>
+
+        <!-- Version bar -->
+        @if (activeTab === 'business') {
+          <div class="doc-version-bar">
+            @if (hasPrevVersion) {
+              <span class="version-chip prev">Previous version →</span>
+              <span class="version-arrow">⟶</span>
+            }
+            <span class="version-chip current">Current Version</span>
+            <span class="version-arrow">↓ latest</span>
+            @if (selectedDoc?.approved) {
+              <span class="version-chip approved-chip">✓ Approved</span>
+            }
+          </div>
+        }
+
+        <!-- Ingestion progress banner -->
+        @if (selectedDoc?.ingestion_status === 'pending' || selectedDoc?.ingestion_status === 'ingesting') {
+          <div class="ingestion-banner">
+            <span class="ingestion-spinner"></span>
+            <div class="ingestion-info">
+              <strong>Ingesting to Vector DB…</strong>
+              <span>Chunking document and storing embeddings for semantic search.</span>
+            </div>
+          </div>
+        }
+        @if (selectedDoc?.ingestion_status === 'completed') {
+          <div class="ingestion-banner ingestion-done">
+            <span class="ingestion-check">✓</span>
+            <div class="ingestion-info">
+              <strong>Indexed in Vector DB</strong>
+              <span>{{ selectedDoc?.chunks_count }} chunks stored — ready for Doc Assistant queries.</span>
+            </div>
+          </div>
+        }
+        @if (selectedDoc?.ingestion_status === 'failed') {
+          <div class="ingestion-banner ingestion-error">
+            <span class="ingestion-x">✗</span>
+            <div class="ingestion-info">
+              <strong>Ingestion failed</strong>
+              <span>Could not store document in Vector DB. Try re-approving.</span>
+            </div>
+          </div>
+        }
+
+        <!-- Content area -->
+        @if (activeTab === 'business') {
+          @if (!showDiff) {
+            <div class="doc-content" [innerHTML]="renderedCurrent"></div>
+          } @else {
+            <div class="diff-view">
+              <div class="diff-col">
+                <div class="diff-col-header">Previous Version</div>
+                <div class="doc-content diff-col-content" [innerHTML]="renderedPrev"></div>
+              </div>
+              <div class="diff-col">
+                <div class="diff-col-header">Current Version</div>
+                <div class="doc-content diff-col-content" [innerHTML]="renderedCurrent"></div>
+              </div>
+            </div>
+          }
+        } @else {
+          <div class="doc-content technical-placeholder">
+            <div class="placeholder-icon">🔧</div>
+            <p>Technical documentation will appear here once generated.</p>
+            <span class="placeholder-hint">This tab is reserved for API specs, data models, and architecture notes.</span>
+          </div>
+        }
+
+      </div>
+
+      <!-- ── Right: AI Document Editor ── -->
+      <div class="doc-editor-panel">
+        <div class="editor-header">
+          <span class="editor-title">AI Document Editor</span>
+          @if (editorRunning) {
+            <span class="editor-running">
+              <span class="pulse-dot"></span> Editing…
+            </span>
+          }
+        </div>
+
+        <!-- Log -->
+        <div class="editor-log">
+          @if (editorLog.length === 0) {
+            <p class="editor-log-empty">
+              Type an instruction below to edit this document using Claude.
+            </p>
+          }
+          @for (entry of editorLog; track $index) {
+            <div class="editor-log-entry" [class.log-user]="entry.role === 'user'" [class.log-agent]="entry.role === 'agent'">
+              <span class="log-role">{{ entry.role === 'user' ? 'You' : 'Agent' }}</span>
+              <span class="log-entry-text">{{ entry.text }}</span>
+            </div>
+          }
+          @if (editorRunning) {
+            <div class="editor-log-entry log-agent">
+              <span class="log-role">Agent</span>
+              <span class="log-entry-text log-typing">
+                <span class="blinking-cursor">▌</span>
+              </span>
+            </div>
+          }
+        </div>
+
+        <!-- Input -->
+        <div class="editor-input-row">
+          <textarea
+            class="editor-input"
+            [(ngModel)]="editorInstruction"
+            placeholder='e.g. "Add a Known Limitations section" or "Simplify the Overview paragraph"'
+            rows="3"
+            [disabled]="editorRunning"
+            (keydown)="onEditorKeydown($event)"
+          ></textarea>
+          <button
+            class="btn btn-primary editor-send-btn"
+            (click)="sendEditorInstruction()"
+            [disabled]="editorRunning || !editorInstruction.trim()"
+          >
+            @if (editorRunning) { … } @else { Send }
+          </button>
+        </div>
+        <div class="editor-hint">Ctrl+Enter to send</div>
+      </div>
+
+    </div>
+  }
+</div>

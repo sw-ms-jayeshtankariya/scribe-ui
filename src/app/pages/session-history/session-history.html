@@ -1,0 +1,187 @@
+<div class="page-wrapper">
+
+  <!-- Top tab bar -->
+  <div class="project-tabs">
+    <a routerLink="/projects" class="back-link">← Projects</a>
+    <div class="tabs">
+      <span class="tab active">Session History</span>
+      <a [routerLink]="['/projects', projectId, 'docs']" class="tab">View Docs</a>
+    </div>
+    <button class="btn btn-success btn-sm" (click)="showGenerateModal = true">▶ Generate Docs</button>
+  </div>
+
+  @if (loadingSessions) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading sessions…</p>
+    </div>
+  } @else if (sessions.length === 0) {
+    <div class="empty-sessions">
+      <p>No generation sessions yet for this project.</p>
+      <button class="btn btn-success" (click)="showGenerateModal = true">▶ Generate Docs</button>
+    </div>
+  } @else {
+    <div class="session-layout">
+
+      <!-- Left: session list -->
+      <div class="session-sidebar">
+        <p class="sidebar-label">PAST SESSIONS</p>
+        @for (s of sessions; track s.id) {
+          <button
+            class="session-item"
+            [class.active]="activeSession?.id === s.id"
+            (click)="selectSession(s)"
+          >
+            <span class="session-status-dot dot-{{ s.status.toLowerCase() }}"></span>
+            <div class="session-item-info">
+              <span class="s-status badge-session-{{ s.status.toLowerCase() }}">{{ statusLabel(s.status) }}</span>
+              <span class="s-date">{{ s.created_at | date:'MMM d, yyyy' }}</span>
+              <span class="s-depth">{{ s.depth?.toUpperCase() }}</span>
+            </div>
+          </button>
+        }
+      </div>
+
+      <!-- Right: live log panel -->
+      <div class="session-log-panel">
+
+        <!-- Log header -->
+        <div class="log-header">
+          <span class="log-session-id">{{ activeSession?.id }}</span>
+          <span class="session-badge session-badge-{{ activeSession?.status?.toLowerCase() }}">
+            {{ statusLabel(activeSession?.status ?? '') }}
+          </span>
+          @if (isRunning) {
+            <span class="running-indicator">
+              <span class="pulse-dot"></span> Live
+            </span>
+          }
+        </div>
+
+        <!-- ✅ Completion banner -->
+        @if (isCompleted) {
+          <div class="completion-banner">
+            <span class="completion-icon">✓</span>
+            <div class="completion-text">
+              <strong>Generation complete</strong>
+              <span>{{ docsApproved }} feature {{ docsApproved === 1 ? 'document' : 'documents' }} approved and saved.</span>
+            </div>
+            <a [routerLink]="['/projects', projectId, 'docs']" class="btn btn-primary btn-sm">View Docs →</a>
+          </div>
+        }
+
+        <!-- Log feed -->
+        <div class="log-feed" #logFeed>
+          @for (ev of events; track $index) {
+            <div class="log-entry" [class.log-user]="ev.type === 'user_message'" [class.log-highlight]="ev.type === 'approved' || ev.type === 'completed'">
+              <span class="log-ts">{{ formatTime(ev.timestamp) }}</span>
+              <span class="log-tag {{ tagClass(ev.type) }}">{{ tagLabel(ev.type, ev.agent) }}</span>
+              <span class="log-text">
+                @if (ev.feature && ev.type !== 'user_message') {
+                  <span class="feature-pill">{{ ev.feature }}</span>
+                }
+                {{ ev.message }}
+                @if (ev.round && ev.round > 0 && ev.type !== 'user_message') {
+                  <span class="round-tag">round {{ ev.round }}</span>
+                }
+              </span>
+            </div>
+          }
+
+          @if (isRunning) {
+            <div class="log-entry log-cursor">
+              <span class="log-ts">—</span>
+              <span class="log-tag tag-agent">AGENT</span>
+              <span class="log-text">
+                <span class="blinking-cursor">▌</span> Processing…
+              </span>
+            </div>
+          }
+
+          @if (events.length === 0 && !isRunning) {
+            <div class="log-empty">No events recorded for this session.</div>
+          }
+        </div>
+
+        <!-- User input (visible while discovering / generating) -->
+        @if (isRunning) {
+          <div class="user-input-row">
+            <textarea
+              class="user-input"
+              [(ngModel)]="userInput"
+              (keydown)="onKeydown($event)"
+              placeholder="Guide the agent… e.g. 'Skip the payment module' or 'Focus more on the auth flow'  (Ctrl+Enter to send)"
+              rows="2"
+            ></textarea>
+            <button
+              class="btn btn-primary btn-sm send-btn"
+              [disabled]="!userInput.trim() || sendingMessage"
+              (click)="sendMessage()"
+            >Send</button>
+          </div>
+        }
+
+        <!-- ── Feature Confirmation panel (AWAITING_CONFIRMATION) ── -->
+        @if (isAwaitingConfirmation) {
+          <div class="confirm-panel">
+            <div class="confirm-header">
+              <span class="confirm-title">⚙ Feature List — Review &amp; Confirm</span>
+              <span class="confirm-hint">Uncheck features you don't need. You can also give the agent free-text instructions below.</span>
+            </div>
+
+            <div class="feature-list">
+              @for (f of featureManifest; track f.feature) {
+                <label class="feature-row" [class.deselected]="!f.selected">
+                  <input type="checkbox" [(ngModel)]="f.selected" />
+                  <div class="feature-info">
+                    <span class="feature-name">{{ f.feature }}</span>
+                    @if (f.description) {
+                      <span class="feature-desc">{{ f.description }}</span>
+                    }
+                    @if (f.jira_epics?.length) {
+                      <span class="feature-jira">{{ f.jira_epics.join(' · ') }}</span>
+                    }
+                  </div>
+                </label>
+              }
+              @if (featureManifest.length === 0) {
+                <p class="no-features">Feature list loading…</p>
+              }
+            </div>
+
+            <div class="confirm-instruction-row">
+              <textarea
+                class="user-input"
+                [(ngModel)]="confirmInstruction"
+                rows="2"
+                placeholder="Optional: tell the agent anything — e.g. 'Merge auth and login into one feature', 'Rename User Management to Account Administration', 'Focus only on payment and notifications'"
+              ></textarea>
+            </div>
+
+            <div class="confirm-actions">
+              <span class="confirm-count">
+                {{ selectedFeaturesCount }} of {{ featureManifest.length }} features selected
+              </span>
+              <button
+                class="btn btn-success"
+                [disabled]="confirmingFeatures || featureManifest.length === 0"
+                (click)="confirmFeatures()"
+              >
+                @if (confirmingFeatures) { Starting… } @else { ▶ Confirm &amp; Generate }
+              </button>
+            </div>
+          </div>
+        }
+
+      </div>
+    </div>
+  }
+</div>
+
+@if (showGenerateModal) {
+  <app-generate-docs-modal
+    [projectName]="projectName"
+    (close)="showGenerateModal = false"
+    (generate)="onGenerate($event)"
+  />
+}

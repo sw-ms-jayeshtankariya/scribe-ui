@@ -1,0 +1,163 @@
+<div class="assistant-panel">
+  <div class="panel-header">
+    <span class="panel-title">💬 Scribe Doc Assistant</span>
+    <div class="panel-header-actions">
+      @if (messages.length > 0) {
+        <button class="clear-btn" (click)="clearConversation()" title="Clear conversation">↺ Clear</button>
+      }
+      <button class="close-btn" (click)="close.emit()" title="Close panel">✕</button>
+    </div>
+  </div>
+
+  <div class="project-select-row">
+    <div class="select-row-top">
+      <div class="select-group">
+        <label>PROJECT</label>
+        @if (loadingProjects) {
+          <select disabled><option>Loading projects…</option></select>
+        } @else {
+          <select [(ngModel)]="selectedProjectId" (ngModelChange)="onProjectChange()">
+            <option value="">— Choose a project —</option>
+            @for (p of projects; track p.id) {
+              <option [value]="p.id">{{ p.name }}</option>
+            }
+          </select>
+        }
+      </div>
+      <div class="role-badge role-{{ currentRole.toLowerCase() }}">
+        {{ roleIcon(currentRole) }} {{ roleLabel(currentRole) }}
+      </div>
+    </div>
+    @if (currentRole !== 'ADMIN') {
+      <span class="role-hint">🔒 Code and implementation details are hidden for {{ roleLabel(currentRole) }} role</span>
+    } @else {
+      <span class="role-hint">🔑 Full access — code and technical details are visible</span>
+    }
+  </div>
+
+  <div class="chat-area" #chatArea>
+    @if (messages.length === 0) {
+      <div class="empty-chat">
+        @if (!selectedProjectId) {
+          <p>Select a project above to start chatting with its documentation.</p>
+        } @else if (loadingSuggestions) {
+          <p>Loading suggestions for <strong>{{ selectedProject?.name }}</strong>…</p>
+        } @else {
+          <p>Ask anything about <strong>{{ selectedProject?.name }}</strong>'s documentation.</p>
+          <span class="empty-hint">The assistant remembers your conversation — ask follow-ups naturally.</span>
+        }
+      </div>
+    }
+    @for (msg of messages; track $index) {
+      <div class="message"
+        [class.user]="msg.role === 'user'"
+        [class.assistant]="msg.role === 'assistant'"
+        [class.guardrail]="msg.guardrail"
+      >
+        @if (msg.guardrail) {
+          <div class="bubble guardrail-bubble">
+            <span class="guardrail-icon">🛡️</span>
+            <span>{{ msg.text }}</span>
+          </div>
+        } @else {
+          <div class="bubble">{{ msg.text }}</div>
+        }
+        @if (msg.role === 'assistant' && !msg.guardrail && (msg.sources?.length || msg.confidence || msg.meta)) {
+          <button class="show-details-btn" (click)="toggleDetails($index)">
+            {{ showDetails[$index] ? 'Hide Details ▲' : 'Show Details ▼' }}
+          </button>
+          @if (showDetails[$index]) {
+            <div class="meta-panel">
+              @if (msg.confidence) {
+                <div class="meta-row">
+                  <span class="meta-label">Confidence</span>
+                  <div class="confidence-bar-wrap">
+                    <div class="confidence-bar">
+                      <div class="confidence-fill confidence-{{ confidenceLevel(msg.confidence) }}"
+                           [style.width.%]="msg.confidence"></div>
+                    </div>
+                    <span class="confidence-score">{{ msg.confidence }}% · {{ confidenceLabel(msg.confidence) }}</span>
+                  </div>
+                </div>
+              }
+              @if (msg.meta) {
+                <div class="meta-row">
+                  <span class="meta-label">Timing</span>
+                  <div class="meta-timing">
+                    <span class="timing-chip">Retrieval: {{ msg.meta?.retrieval_time_ms }}ms</span>
+                    <span class="timing-chip">LLM: {{ msg.meta?.generation_time_ms }}ms</span>
+                    <span class="timing-chip total">Total: {{ msg.meta?.total_time_ms }}ms</span>
+                  </div>
+                </div>
+              }
+              @if (msg.meta) {
+                <div class="meta-row">
+                  <span class="meta-label">Agent</span>
+                  <span class="meta-value">{{ msg.meta?.model }} · Turn {{ msg.meta?.conversation_turn }} · {{ msg.meta?.history_turns_sent }} prior turns · Role: {{ msg.meta?.role ?? currentRole }}</span>
+                </div>
+              }
+              @if (msg.meta?.chunk_details?.length) {
+                <div class="meta-row">
+                  <span class="meta-label">Chunks Retrieved</span>
+                  <span class="meta-value">{{ msg.meta?.chunks_retrieved }} chunks · {{ msg.meta?.total_context_words }} words total</span>
+                </div>
+                <div class="chunk-list">
+                  @for (chunk of msg.meta?.chunk_details ?? []; track chunk.id) {
+                    <div class="chunk-item">
+                      <span class="chunk-source">{{ chunk.feature }} → {{ chunk.section }}</span>
+                      <span class="chunk-words">{{ chunk.words }} words</span>
+                    </div>
+                  }
+                </div>
+              }
+              @if (msg.meta?.retrieval_query) {
+                <div class="meta-row">
+                  <span class="meta-label">Retrieval Query</span>
+                  <span class="meta-value mono">{{ msg.meta?.retrieval_query }}</span>
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+    }
+    @if (sending) {
+      <div class="message assistant">
+        <div class="bubble typing-bubble">
+          <span class="typing-dots">
+            <span></span><span></span><span></span>
+          </span>
+        </div>
+      </div>
+    }
+
+    @if (suggestions.length > 0 && !sending) {
+      <div class="suggestions-row">
+        <span class="suggestions-label">{{ messages.length === 0 ? 'Try asking' : 'Follow up' }}</span>
+        <div class="suggestion-chips">
+          @for (s of suggestions; track s) {
+            <button class="suggestion-chip" (click)="useSuggestion(s)">{{ s }}</button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="chat-footer">
+    @if (turnCount > 0) {
+      <span class="turn-counter">{{ turnCount }} {{ turnCount === 1 ? 'turn' : 'turns' }} in this conversation</span>
+    }
+    <div class="chat-input-row">
+      <input
+        type="text"
+        [(ngModel)]="userInput"
+        [placeholder]="placeholder"
+        [disabled]="!selectedProjectId || sending"
+        (keydown)="onKeydown($event)"
+      />
+      <button class="send-btn" [disabled]="!selectedProjectId || !userInput.trim() || sending" (click)="sendMessage()">
+        @if (sending) { … } @else { Send }
+      </button>
+    </div>
+  </div>
+</div>
