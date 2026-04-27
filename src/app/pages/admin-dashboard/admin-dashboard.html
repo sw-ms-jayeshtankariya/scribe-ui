@@ -3,153 +3,183 @@
     <h1>Admin Dashboard</h1>
     <div class="date-filter">
       <label>From:</label>
-      <input type="date" [(ngModel)]="fromDate" />
+      <input type="date" [(ngModel)]="fromDate" (change)="onDateChange()" />
       <label>To:</label>
-      <input type="date" [(ngModel)]="toDate" />
-      <span class="total-queries">Total queries: {{ totalQueries }}</span>
+      <input type="date" [(ngModel)]="toDate" (change)="onDateChange()" />
     </div>
   </div>
 
   <!-- Summary stat cards -->
   <div class="stat-cards">
     <div class="stat-card">
-      <span class="stat-label">TOTAL RUNS</span>
-      <span class="stat-value">{{ summaryStats.runs }}</span>
+      <span class="stat-label">PROJECTS</span>
+      <span class="stat-value">{{ stats.total_projects ?? '—' }}</span>
     </div>
     <div class="stat-card">
-      <span class="stat-label">TOTAL COST</span>
-      <span class="stat-value">{{ summaryStats.cost }}</span>
+      <span class="stat-label">GENERATION SESSIONS</span>
+      <span class="stat-value">{{ stats.total_sessions ?? '—' }}</span>
     </div>
     <div class="stat-card">
-      <span class="stat-label">TOTAL TOKENS</span>
-      <span class="stat-value">{{ summaryStats.tokens }}</span>
+      <span class="stat-label">DOCUMENTS</span>
+      <span class="stat-value">{{ stats.total_documents ?? '—' }}</span>
+      <span class="stat-sub">{{ stats.approved_documents ?? 0 }} approved</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">CUSTOMER INTAKES</span>
+      <span class="stat-value">{{ stats.total_intakes ?? '—' }}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">AGENT EVENTS</span>
+      <span class="stat-value">{{ stats.total_events ?? '—' }}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">DOC ASSISTANT QUERIES</span>
+      <span class="stat-value">{{ stats.total_queries ?? '—' }}</span>
     </div>
   </div>
 
   <!-- Charts row -->
   <div class="charts-row">
+    <!-- Events timeline -->
     <div class="chart-card">
-      <h3>Queries Over Time</h3>
-      <div class="mock-chart line-chart">
-        <div class="bar-group">
-          @for (h of [6,10,12,8,4,2,3,2,1,3,2,3,2,1]; track $index) {
-            <div class="bar-line" [style.height.px]="h * 9"></div>
+      <h3>Agent Events (Last 14 Days)</h3>
+      @if (eventsTimeline.length > 0) {
+        <div class="mock-chart line-chart">
+          <div class="bar-group">
+            @for (e of eventsTimeline; track e.date) {
+              <div class="bar-line" [style.height.px]="(e.count / maxTimelineCount()) * 100" [title]="e.date + ': ' + e.count + ' events'"></div>
+            }
+          </div>
+          <div class="chart-x-labels">
+            @for (e of eventsTimeline; track e.date; let i = $index) {
+              @if (i % 3 === 0 || i === eventsTimeline.length - 1) {
+                <span>{{ e.date.substring(5) }}</span>
+              }
+            }
+          </div>
+        </div>
+      } @else {
+        <p class="no-data">No events recorded yet.</p>
+      }
+    </div>
+
+    <!-- Agent activity -->
+    <div class="chart-card">
+      <h3>Agent Activity</h3>
+      @if (agentActivity.length > 0) {
+        <div class="agent-bars">
+          @for (a of agentActivity; track a.agent) {
+            <div class="agent-bar-row">
+              <span class="agent-name">{{ a.agent }}</span>
+              <div class="agent-bar-track">
+                <div class="agent-bar-fill" [style.width.%]="(a.events / agentActivity[0].events) * 100"></div>
+              </div>
+              <span class="agent-count">{{ a.events }}</span>
+            </div>
           }
         </div>
-        <div class="chart-x-labels">
-          <span>Mar 10</span><span>Mar 17</span><span>Mar 25</span>
-          <span>Apr 08</span><span>Apr 13</span><span>Apr 21</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="chart-card">
-      <h3>Queries by Role</h3>
-      <div class="donut-wrap">
-        <div class="donut">
-          <div class="donut-inner">50/50</div>
-        </div>
-        <div class="donut-legend">
-          <span class="legend-item"><span class="dot engineer"></span> ENGINEER</span>
-          <span class="legend-item"><span class="dot reviewer"></span> REVIEWER</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="chart-card">
-      <h3>Model Usage</h3>
-      <div class="bar-chart-v">
-        <div class="v-bar-group">
-          <div class="v-bar-item"><div class="v-bar sonnet" style="height:148px"></div><span>Sonnet</span></div>
-          <div class="v-bar-item"><div class="v-bar haiku"  style="height:20px"></div><span>Haiku</span></div>
-          <div class="v-bar-item"><div class="v-bar none"   style="height:12px"></div><span>none</span></div>
-        </div>
-      </div>
+      } @else {
+        <p class="no-data">No agent activity yet.</p>
+      }
     </div>
   </div>
 
-  <!-- Top Questions -->
-  <div class="section-row">
-    <div class="card half">
-      <h3>Top 10 Questions</h3>
-      <div class="top-questions">
-        @for (q of topQuestions; track $index) {
-          <div class="q-row">
-            <span class="q-text">{{ q.q }}</span>
-            <div class="q-bar-wrap">
-              <div class="q-bar" [style.width.%]="(q.count / 32) * 100"></div>
-            </div>
-            <span class="q-count">{{ q.count }}</span>
-          </div>
-        }
-      </div>
-    </div>
-
-    <!-- Cost by Project -->
-    <div class="card half">
-      <h3>Cost by Project</h3>
+  <!-- Projects summary -->
+  <div class="card full">
+    <h3>Projects Overview</h3>
+    @if (projectsSummary.length > 0) {
       <table class="data-table">
         <thead>
-          <tr><th>Project</th><th>Runs</th><th>Tokens</th><th>Cost</th></tr>
+          <tr>
+            <th>Project</th>
+            <th>Status</th>
+            <th>Features</th>
+            <th>Sessions</th>
+            <th>Documents</th>
+            <th>Approved</th>
+            <th>Intakes</th>
+          </tr>
         </thead>
         <tbody>
-          @for (row of costByProject; track row.project) {
+          @for (p of projectsSummary; track p.project_id) {
             <tr>
-              <td>{{ row.project }}</td>
-              <td>{{ row.runs }}</td>
-              <td>{{ row.tokens }}</td>
-              <td class="cost-val">{{ row.cost }}</td>
+              <td>
+                <a [routerLink]="['/projects', p.project_id, 'session']" class="project-link">{{ p.name }}</a>
+                <div class="mini-badges">
+                  @for (b of p.tech_badges; track b.label; let i = $index) {
+                    @if (i < 3) {
+                      <span class="mini-badge badge-{{ b.cls }}">{{ b.label }}</span>
+                    }
+                  }
+                </div>
+              </td>
+              <td><span [class]="statusCls(p.status)">{{ p.status }}</span></td>
+              <td>{{ p.features_count }}</td>
+              <td>{{ p.sessions }}</td>
+              <td>{{ p.documents }}</td>
+              <td>{{ p.approved }}</td>
+              <td>{{ p.intakes }}</td>
             </tr>
           }
         </tbody>
       </table>
+    } @else {
+      <p class="no-data">No projects yet. <a routerLink="/projects/new">Create one →</a></p>
+    }
+  </div>
+
+  <!-- Two-column: Recent Sessions + Recent Intakes -->
+  <div class="section-row">
+    <!-- Recent Sessions -->
+    <div class="card half">
+      <h3>Recent Generation Sessions</h3>
+      @if (recentSessions.length > 0) {
+        <table class="data-table compact">
+          <thead>
+            <tr><th>Session</th><th>Project</th><th>Depth</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            @for (s of recentSessions; track s.id) {
+              <tr>
+                <td><code class="run-id">{{ s.id }}</code></td>
+                <td>{{ s.project }}</td>
+                <td><span class="depth-chip">{{ s.depth }}</span></td>
+                <td><span [class]="statusCls(s.status)">{{ s.status }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="no-data">No sessions yet.</p>
+      }
     </div>
-  </div>
 
-  <!-- Agent Performance -->
-  <div class="card full">
-    <h3>Agent Performance</h3>
-    <table class="data-table">
-      <thead>
-        <tr><th>Agent</th><th>Calls</th><th>Avg Tokens</th><th>Avg Duration</th><th>Files Scanned</th><th>Total Cost</th></tr>
-      </thead>
-      <tbody>
-        @for (a of agentPerformance; track a.name) {
-          <tr>
-            <td><code>{{ a.name }}</code></td>
-            <td>{{ a.calls }}</td>
-            <td>{{ a.avgTokens.toLocaleString() }}</td>
-            <td>{{ a.avgDuration }}</td>
-            <td>{{ a.filesScanned }}</td>
-            <td class="cost-val">{{ a.totalCost }}</td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Recent Generation Runs -->
-  <div class="card full" style="margin-top:20px">
-    <h3>Recent Generation Runs</h3>
-    <table class="data-table">
-      <thead>
-        <tr><th>Run ID</th><th>Project</th><th>Depth</th><th>Status</th><th>Duration</th><th>Agent Calls</th><th>Files</th><th>Features</th><th>Cost</th></tr>
-      </thead>
-      <tbody>
-        @for (r of recentRuns; track r.id) {
-          <tr>
-            <td><code class="run-id">{{ r.id }}</code></td>
-            <td>{{ r.project }}</td>
-            <td><span class="depth-chip">{{ r.depth }}</span></td>
-            <td><span [class]="statusCls(r.status)">{{ r.status }}</span></td>
-            <td>{{ r.duration }}</td>
-            <td>{{ r.agentCalls }}</td>
-            <td>{{ r.files }}</td>
-            <td>{{ r.features }}</td>
-            <td class="cost-val">{{ r.cost }}</td>
-          </tr>
-        }
-      </tbody>
-    </table>
+    <!-- Recent Intakes -->
+    <div class="card half">
+      <h3>Recent Customer Intakes</h3>
+      @if (recentIntakes.length > 0) {
+        <table class="data-table compact">
+          <thead>
+            <tr><th>Title</th><th>Project</th><th>Severity</th><th>Status</th><th>Fix?</th></tr>
+          </thead>
+          <tbody>
+            @for (i of recentIntakes; track i.id) {
+              <tr>
+                <td class="intake-title-cell">{{ i.title }}</td>
+                <td>{{ i.project }}</td>
+                <td><span class="sev-badge {{ sevCls(i.severity) }}">{{ i.severity }}</span></td>
+                <td><span [class]="statusCls(i.status)">{{ i.status }}</span></td>
+                <td>
+                  @if (i.code_fix_needed) { <span class="fix-yes">Yes</span> }
+                  @else { <span class="fix-no">No</span> }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="no-data">No intakes yet.</p>
+      }
+    </div>
   </div>
 </div>

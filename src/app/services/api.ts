@@ -115,6 +115,37 @@ export interface Document {
 export class ApiService {
   constructor(private http: HttpClient) {}
 
+  // ── Dashboard ───────────────────────────────────────────────────────────────
+
+  getDashboardStats(fromDate?: string, toDate?: string): Observable<any> {
+    let params: any = {};
+    if (fromDate) params.from_date = fromDate;
+    if (toDate) params.to_date = toDate;
+    return this.http.get(`${BASE}/dashboard/stats`, { params });
+  }
+
+  getProjectsSummary(): Observable<any[]> {
+    return this.http.get<any[]>(`${BASE}/dashboard/projects-summary`);
+  }
+
+  getRecentSessions(limit = 10): Observable<any[]> {
+    return this.http.get<any[]>(`${BASE}/dashboard/recent-sessions`, { params: { limit } });
+  }
+
+  getRecentIntakes(limit = 10): Observable<any[]> {
+    return this.http.get<any[]>(`${BASE}/dashboard/recent-intakes`, { params: { limit } });
+  }
+
+  getAgentActivity(): Observable<any[]> {
+    return this.http.get<any[]>(`${BASE}/dashboard/agent-activity`);
+  }
+
+  getEventsTimeline(days = 14): Observable<any[]> {
+    return this.http.get<any[]>(`${BASE}/dashboard/events-timeline`, { params: { days } });
+  }
+
+  // ── Projects ────────────────────────────────────────────────────────────────
+
   getProjects(): Observable<Project[]> {
     return this.http.get<Project[]>(`${BASE}/projects/`);
   }
